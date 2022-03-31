@@ -2,7 +2,7 @@ package com.temprovich.apollo.system;
 
 public abstract class IntervalSystem extends AbstractEntitySystem {
 
-    private float interval;
+    protected float interval;
     private float accumulator;
 
     public IntervalSystem(float interval) {

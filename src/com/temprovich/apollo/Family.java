@@ -10,8 +10,8 @@ public final class Family {
     private final Set<Class<?>> types = new HashSet<Class<?>>();
 
     @SafeVarargs
-    private Family(Class<? extends Component>... types) {
-        for (Class<? extends Component> type : types) this.types.add(type);
+    private Family(Class<?>... types) {
+        for (Class<?> type : types) this.types.add(type);
     }
 
     private Family(Family family) {
@@ -19,7 +19,7 @@ public final class Family {
     }
 
     @SafeVarargs
-    public static Family define(Class<? extends Component>... types) {
+    public static Family define(Class<?>... types) {
         return new Family(types);
     }
 
@@ -35,7 +35,7 @@ public final class Family {
     }
 
     @SafeVarargs
-    public static Family define(Family original, Class<? extends Component>... types) {
+    public static Family define(Family original, Class<?>... types) {
         Family family = new Family(original);
         for (Class<?> type : types) family.types.add(type);
         return family;

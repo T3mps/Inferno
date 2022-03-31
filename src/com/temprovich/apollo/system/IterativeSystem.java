@@ -4,10 +4,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.temprovich.apollo.Entity;
+import com.temprovich.apollo.EntityListener;
 import com.temprovich.apollo.Family;
 import com.temprovich.apollo.Registry;
 
-public abstract class IterativeSystem extends AbstractEntitySystem {
+public abstract class IterativeSystem extends AbstractEntitySystem implements EntityListener {
 
     private Family family;
 
@@ -32,12 +33,23 @@ public abstract class IterativeSystem extends AbstractEntitySystem {
 
     @Override
     public void onBind(Registry registry) {
-        entities = registry.view(family);
+        this.entities = registry.view(family);
+        registry.register(this, family);
     }
 
     @Override
     public void onUnbind(Registry registry) {
-        entities = null;
+        this.entities = null;
+    }
+
+    @Override
+    public void onEntityAdd(Entity entity) {
+        entities.add(entity);
+    }
+
+    @Override
+    public void onEntityRemove(Entity entity) {
+        entities.remove(entity);
     }
 
     public List<Entity> getEntities() {

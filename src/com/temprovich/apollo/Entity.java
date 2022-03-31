@@ -33,7 +33,6 @@ public final class Entity {
     }
 
     public final Entity add(final Component c) {
-        if (enabled || registry != null) throw new IllegalStateException("Entity is enabled or has been added to a registry");
         if (c.getParent() != null) throw new IllegalArgumentException("Component already added to an entity");
         
         components.add(c);

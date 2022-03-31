@@ -223,7 +223,7 @@ public class Registry {
             initView(family, view);
         }
 
-        return Collections.unmodifiableList(view);
+        return view;
     }
 
     @SafeVarargs
@@ -295,6 +295,12 @@ public class Registry {
         system.onBind(this);
     }
 
+    public void bind(EntitySystem system, Family family) {
+        if (updating) throw new IllegalStateException("cannot add system while updating");
+
+        
+    }
+
     public void unbind(EntitySystem system) throws IllegalStateException, IllegalArgumentException {
         if (updating) throw new IllegalStateException("cannot remove system while updating");
         
@@ -345,12 +351,6 @@ public class Registry {
 
     public int entityCount() {
         return entities.size();
-    }
-
-    private interface Task {
-
-        void execute();
-
     }
 
 }
