@@ -69,7 +69,7 @@ class Testbed {
                                                       .onComponentAdd
                                                       .register(componentListener);
 
-        for (int i = 0; i < 32; i++) registry.update(0.016f);
+        for (int i = 0; i < 32; i++) registry.update(/* example deltaTime value */ 0.01f);
         
         registry.dispose();
     }
