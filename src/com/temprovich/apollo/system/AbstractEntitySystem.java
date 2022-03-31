@@ -2,7 +2,7 @@ package com.temprovich.apollo.system;
 
 import com.temprovich.apollo.Registry;
 
-public abstract class AbstractEntitySystem implements EntitySystem {
+public class AbstractEntitySystem implements EntitySystem {
     
     protected int priority;
 

@@ -5,9 +5,13 @@ import java.util.Iterator;
 import java.util.NoSuchElementException;
 
 /**
- * A bag is a collection of items that can be added to and removed from.
+ * An implementation of a MultiSe; a {@link java.util.Set Set} that allows 
+ * multiple elements to be added to it.
  * <p>
  * The items are not ordered.
+ * <p>
+ * <strong>Note:</strong> This class does not extend {@link java.util.Set Set},
+ * instead it extends {@link java.util.Collection Collection}.
  * 
  * @author Ethan Temprovich
  */

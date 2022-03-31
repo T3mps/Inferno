@@ -1,6 +1,7 @@
 package test;
 
 import com.temprovich.apollo.Entity;
+import com.temprovich.apollo.EntityListener;
 import com.temprovich.apollo.Family;
 import com.temprovich.apollo.Registry;
 import com.temprovich.apollo.component.AbstractComponent;
@@ -13,6 +14,30 @@ class Testbed {
     static final Registry registry = new Registry();
 
     public static void main(String[] args) {
+        EntityListener physicsListener = new EntityListener() {
+            @Override
+            public void onEntityAdd(Entity entity) {
+                System.out.println("Entity added to physics world");
+            }
+
+            @Override
+            public void onEntityRemove(Entity entity) {
+                System.out.println("Entity removed from physics world");
+            }
+        };
+
+        EntityListener renderListener = new EntityListener() {
+            @Override
+            public void onEntityAdd(Entity entity) {
+                System.out.println("Entity added to render list");
+            }
+
+            @Override
+            public void onEntityRemove(Entity entity) {
+                System.out.println("Entity removed from render list");
+            }
+        };
+
         SignalListener<Entity> componentListener = new SignalListener<Entity>() {
             @Override
             public void receive(Entity entity) {
@@ -23,19 +48,26 @@ class Testbed {
         Family physicsFamily = Family.define(TransformComponent.class, RigidbodyComponent.class);
         Family renderFamily = Family.define(TransformComponent.class, RenderComponent.class);
 
-        IterativeIntervalSystem physicsSystem = new PhysicsSystem();
-        IterativeSystem renderSystem = new RenderSystem();
+        registry.bind(new PhysicsSystem());
+        registry.bind(new RenderSystem());
 
-        registry.bind(physicsSystem, physicsFamily);
-        registry.bind(renderSystem, renderFamily);
+        registry.register(physicsListener, physicsFamily);
+        registry.register(renderListener, renderFamily);
 
-        for (int i = 0; i < 10; i++) {
-            Entity entity = registry.create();
+        for (int i = 0; i < 16; i++) {
+            Entity entity = Registry.create();
             entity.onComponentAdd.register(componentListener);
             entity.add(new TransformComponent());
-            entity.add(new RigidbodyComponent());
-            // if (Math.random() > 0.5) entity.add(new RenderComponent(Math.random() * 10));
+            if (Math.random() > 0.5) entity.add(new RigidbodyComponent());
+            if (Math.random() > 0.5) entity.add(new RenderComponent(Math.random() * 100));
+            registry.add(entity);
         }
+
+        for (int i = 0; i < 16; i++) registry.emplace(new TransformComponent(), 
+                                                      new RigidbodyComponent(),
+                                                      new RenderComponent(Math.random() * 100))
+                                                      .onComponentAdd
+                                                      .register(componentListener);
 
         for (int i = 0; i < 32; i++) registry.update(0.016f);
         

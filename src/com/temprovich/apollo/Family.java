@@ -10,77 +10,83 @@ public final class Family {
     private final Set<Class<?>> types = new HashSet<Class<?>>();
 
     @SafeVarargs
-    private Family(Class<?>... types) {
+    private Family(final Class<?>... types) {
+        if (types.length == 0) throw new IllegalArgumentException("Family must have at least one type");
         for (Class<?> type : types) this.types.add(type);
     }
 
-    private Family(Family family) {
+    private Family(final Family family) {
         this.types.addAll(family.types);
     }
 
     @SafeVarargs
-    public static Family define(Class<?>... types) {
+    public static Family define(final Class<?>... types) {
         return new Family(types);
     }
 
-    public static Family define(Family family) {
+    public static Family define(final Family family) {
         Family result = new Family(family);
         return result;
     }
 
-    public static Family define(Entity entity) {
+    public static Family define(final Entity entity) {
         Family family = new Family();
-        for (Component component : entity.getComponents()) family.types.add(component.getClass());
+        for (var component : entity.getComponents()) family.types.add(component.getClass());
         return family;
     }
 
     @SafeVarargs
-    public static Family define(Family original, Class<?>... types) {
+    public static Family define(final Family original, final Class<? extends Component>... types) {
         Family family = new Family(original);
-        for (Class<?> type : types) family.types.add(type);
+        for (var type : types) family.types.add(type);
         return family;
     }
 
-    public boolean isMember(Entity e) {
-        for (Class<?> type : types) if (!e.has(type)) {
+    public final boolean isMember(final Entity entity) {
+        for (var type : types) if (!entity.has(type)) {
             return false;
         }
+
         return true;
     }
 
-    public boolean isRelated(Entity e) {
-        for (Class<?> type : types) if (e.has(type)) {
+    public final boolean isRelated(final Entity entity) {
+        for (var type : types) if (entity.has(type)) {
             return true;
         }
+
         return false;
     }
 
-    public boolean isSubsetOf(Family family) {
-        for (Class<?> type : types) if (!family.types.contains(type)) {
+    public final boolean isSubsetOf(final Family family) {
+        for (var type : types) if (!family.types.contains(type)) {
             return false;
         }
+
         return true;
     }
 
-    public boolean isSupersetOf(Family family) {
-        for (Class<?> type : family.types) if (!types.contains(type)) {
+    public final boolean isSupersetOf(final Family family) {
+        for (var type : family.types) if (!types.contains(type)) {
             return false;
         }
+
         return true;
     }
 
-    public boolean isDisjointFrom(Family family) {
-        for (Class<?> type : types) if (family.types.contains(type)) {
+    public final boolean isDisjointFrom(final Family family) {
+        for (var type : types) if (family.types.contains(type)) {
             return false;
         }
+
         return true;
     }
 
-    public boolean has(Class<?> type) {
+    public final boolean has(final Class<?> type) {
         return types.contains(type);
     }
 
-    public Class<?>[] getTypes() {
+    public final Class<?>[] getTypes() {
         return types.toArray(new Class<?>[0]);
     }
 
@@ -101,6 +107,18 @@ public final class Family {
             if (other.types != null) return false;
         } else if (!types.equals(other.types)) return false;
         return true;
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder builder = new StringBuilder();
+        builder.append("Family [types=");
+        for (var type : types) {
+            builder.append(type.getSimpleName());
+            builder.append(", ");
+        }
+        builder.append("]");
+        return builder.toString();
     }
 
 }

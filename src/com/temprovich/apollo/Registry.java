@@ -7,14 +7,12 @@ import java.util.Deque;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.concurrent.LinkedBlockingDeque;
 
 import com.temprovich.apollo.component.Component;
 import com.temprovich.apollo.system.EntitySystem;
-import com.temprovich.apollo.util.Array;
 
-public class Registry {
+public final class Registry {
 
     private static final int DEFAULT_INITIAL_CAPACITY = 48;
 
@@ -32,9 +30,9 @@ public class Registry {
         this(DEFAULT_INITIAL_CAPACITY);
     }
 
-    public Registry(int capacity) {
-        this.entities = new ArrayList<Entity>(capacity);
-        this.views = new HashMap<Family, List<Entity>>(capacity);
+    public Registry(final int initialCapacity) {
+        this.entities = new ArrayList<Entity>(initialCapacity);
+        this.views = new HashMap<Family, List<Entity>>(initialCapacity);
         this.tasks = new LinkedBlockingDeque<Task>();
         this.systems = new ArrayList<EntitySystem>();
         this.listeners = new ArrayList<EntityListener>();
@@ -42,133 +40,128 @@ public class Registry {
         this.updating = false;
     }
 
-    public final Entity create() {
-        Entity e = new Entity();
-        add(e);
-        return e;
+    public static final Entity create() {
+        return new Entity();
     }
 
-    public final Array<Entity> create(int n) {
-        Array<Entity> entities = new Array<Entity>(n);
-        for (int i = 0; i < n; i++) entities.add(create());
-        return entities;
+    public static final Entity emulate(final Entity entity) {
+        return new Entity(entity);
     }
 
     @SafeVarargs
     public final <T extends Component> Entity emplace(final T... components) {
-        Entity e = new Entity().addAll(components);
-        add(e);
-        return e;
+        Entity entity = new Entity().addAll(components);
+        add(entity);
+        return entity;
+    }
+    
+    public final void add(final Entity entity) {
+        if (updating) tasks.add(() -> { addInternal(entity); });
+        else addInternal(entity);
     }
 
-    @SafeVarargs
-    public final <T extends Component> Array<Entity> emplace(int n, final T... components) {
-        Array<Entity> entities = new Array<Entity>(n);
-        for (int i = 0; i < n; i++) entities.add(emplace(components));
-        return entities;
+    public final void add(final List<Entity> entities) {
+        for (var entity : entities) add(entity);
     }
     
-    public Entity add(Entity e) {
-        if (updating) tasks.add(() -> { addInternal(e); });
-        else addInternal(e);
-        return e;
-    }
-    
-    private void addInternal(Entity e) {
-        if (e.getEngine() != null || entities.contains(e)) throw new IllegalArgumentException("Entity already added to a registry");
-        if (e.isEnabled()) throw new IllegalArgumentException("Entity is already enabled");
+    private void addInternal(Entity entity) {
+        if (entity.getRegistry() != null || entities.contains(entity)) throw new IllegalArgumentException("Entity already added to a registry");
+        if (entity.isEnabled()) throw new IllegalArgumentException("Entity is already enabled");
         
-        entities.add(e);
-        e.setEngine(this);
-        e.enable();
+        entities.add(entity);
+        entity.setRegistry(this);
+        entity.enable();
         
-        for (Family family : views.keySet()) if (family.isMember(e)) {
-            views.get(family).add(e);
+        for (Family family : views.keySet()) if (family.isMember(entity)) {
+            views.get(family).add(entity);
         }
 
-        for (EntityListener l : listeners) l.onEntityAdd(e);
+        for (EntityListener l : listeners) l.onEntityAdd(entity);
         
-        for (Entry<Family, List<EntityListener>> entry : filteredListeners.entrySet()) {
-        	if (entry.getKey().isMember(e)) {
-                for (EntityListener l : entry.getValue()) { l.onEntityAdd(e); }
-        	}
+        for (var entry : filteredListeners.entrySet()) if (entry.getKey().isMember(entity)) {
+            for (EntityListener l : entry.getValue()) l.onEntityAdd(entity);
         }
     }
 
-    public void destroy(Entity e) {
-        if (updating) tasks.add(() -> { removeInternal(e); });
-        else removeInternal(e);
+    public final void destroy(final Entity entity) {
+        if (updating) tasks.add(() -> { removeInternal(entity); });
+        else removeInternal(entity);
     }
 
-    public void destroy(List<Entity> entities) {
-        for (Entity e : entities) destroy(e);
+    public final void destroy(final Entity entity, final boolean immediate) {
+        if (immediate) removeInternal(entity);
+        else destroy(entity);
     }
 
-    private void removeInternal(Entity e) {
-        if (e.getEngine() != this) return;
-        if (!e.isEnabled()) throw new IllegalArgumentException("Entity is not enabled");
-        if (!entities.contains(e)) throw new IllegalArgumentException("Entity is not in this registry");
+    public final void destroy(final List<Entity> entities) {
+        for (var entity : entities) destroy(entity);
+    }
+
+    private void removeInternal(Entity entity) {
+        if (entity.getRegistry() != this) return;
+        if (!entity.isEnabled()) throw new IllegalArgumentException("Entity is not enabled");
+        if (!entities.contains(entity)) throw new IllegalArgumentException("Entity not added to this registry");
 
         // inform listeners as long as the entity is still active
-        for (EntityListener l : listeners) l.onEntityRemove(e);
+        for (EntityListener l : listeners) l.onEntityRemove(entity);
         
-        for (Entry<Family, List<EntityListener>> entry : filteredListeners.entrySet()) {
-        	if (entry.getKey().isMember(e)) {
-                for (EntityListener l : entry.getValue()) { l.onEntityRemove(e); }
+        for (var entry : filteredListeners.entrySet()) {
+        	if (entry.getKey().isMember(entity)) {
+                for (EntityListener l : entry.getValue()) l.onEntityRemove(entity);
         	}
         }
         
         // actually remove entity
-        e.disable();
-        e.removeEngine();
-        entities.remove(e);
-        e.flush();
+        entity.disable();
+        entity.removeRegistry();
+        entities.remove(entity);
+        entity.flush();
        
-        for (List<Entity> view : views.values()) view.remove(e);
+        for (List<Entity> view : views.values()) view.remove(entity);
     }
 
-    public void destroyAll() {
+    public final void destroyAll() {
         if (updating) tasks.add(() -> { removeAllInternal(); });
         else removeAllInternal();
     }
 
-    private void removeAllInternal() {
+    private final void removeAllInternal() {
         while (!entities.isEmpty()) removeInternal(entities.get(0));
     }
 
-    public Entity release(Entity e) {
-        if (updating) tasks.add(() -> { releaseInternal(e); });
-        else releaseInternal(e);
-        return e;
+    public final Entity release(final Entity entity) {
+        if (updating) tasks.add(() -> { releaseInternal(entity); });
+        else releaseInternal(entity);
+        return entity;
     }
 
-    public Entity release(List<Entity> entities) {
-        for (Entity e : entities) release(e);
+    public final Entity release(final List<Entity> entities) {
+        for (var entity : entities) release(entity);
         return entities.get(0);
     }
 
-    private void releaseInternal(Entity e) {
-        if (e.getEngine() != this) throw new IllegalArgumentException("Entity is not in this registry");
-        if (!e.isEnabled()) throw new IllegalArgumentException("Entity is not enabled");
+    private void releaseInternal(Entity entity) {
+        if (entity.getRegistry() != this) throw new IllegalArgumentException("Entity not added to this registry");
+        if (!entity.isEnabled()) throw new IllegalArgumentException("Entity is not enabled");
         
-        e.disable();
-        e.removeEngine();
-        entities.remove(e);
+        entity.disable();
+        entity.removeRegistry();
+        entities.remove(entity);
         
-        for (Family family : views.keySet()) if (family.isMember(e)) {
-            views.get(family).remove(e);
+        for (Family family : views.keySet()) if (family.isMember(entity)) {
+            views.get(family).remove(entity);
         }
 
-        for (EntityListener l : listeners) l.onEntityRemove(e);
+        for (EntityListener l : listeners) l.onEntityRemove(entity);
         
-        for (Entry<Family, List<EntityListener>> entry : filteredListeners.entrySet()) {
-        	if (entry.getKey().isMember(e)) {
-                for (EntityListener l : entry.getValue()) { l.onEntityRemove(e); }
+        for (var entry : filteredListeners.entrySet()) {
+        	if (entry.getKey().isMember(entity)) {
+                for (EntityListener l : entry.getValue()) { l.onEntityRemove(entity); }
         	}
         }
     }
 
-    public void releaseAll() {
+    public final void releaseAll() {
         if (updating) tasks.add(() -> { releaseAllInternal(); });
         else releaseAllInternal();
     }
@@ -182,7 +175,7 @@ public class Registry {
         updating = true;
         
         // update systems
-        for (EntitySystem p : systems) if (p.isEnabled()) {
+        for (var p : systems) if (p.isEnabled()) {
             p.update(dt);
         }
         
@@ -213,51 +206,63 @@ public class Registry {
         systems.clear();
     }
 
-    public final List<Entity> view(final Family family) {
-        List<Entity> view = views.get(family);
-
-        if (view == null) {
-            view = new ArrayList<Entity>();
-            views.put(family, view);
-
-            initView(family, view);
-        }
-
-        return view;
-    }
-
-    @SafeVarargs
-    public final List<Entity> view(final Class<? extends Component>... components) {
-        return view(Family.define(components));
-    }
-
-    public Entity get(int index) {
+    public final Entity get(final int index) {
         return entities.get(index);
     }
 
-    public boolean has(Entity e) {
-        return entities.contains(e);
+    public final boolean has(final Entity entity) {
+        return entities.contains(entity);
+    }
+
+    public final void bind(final EntitySystem system) {
+        if (updating) throw new IllegalStateException("Cannot bind systems while updating");
+        
+        EntitySystem old = getSystem(system.getClass());
+        
+        if (old != null) unbind(old);
+        
+        system.bind(this);
+        systems.add(system);
+        systems.sort(new EntitySystem.SystemComparator());
+        system.onBind(this);
+    }
+
+    public final void unbind(final EntitySystem system) {
+        if (updating) throw new IllegalStateException("Cannot unbind systems while updating");
+        if (!systems.contains(system)) throw new IllegalArgumentException("System not bound to this registry");
+        
+        system.onUnbind(this);
+        systems.remove(system);
+        system.unbind();
+    }
+
+    public final <T extends EntitySystem> T getSystem(final Class<T> clazz) {
+        for (EntitySystem p : systems) if (clazz.isInstance(p)) {
+            return clazz.cast(p);
+        }
+        
+        return null;
+    }
+
+    public final EntitySystem getSystem(final int index) {
+        return systems.get(index);
     }
     
-    private void initView(Family family, List<Entity> view) {
-        if (!view.isEmpty()) return;
-
-        for (Entity e : entities) if (family.isMember(e)) {
-            view.add(e);
+    public final <T extends EntitySystem> boolean hasSystem(final Class<T> clazz) {
+        for (EntitySystem p : systems) if (p.getClass() == clazz) {
+            return true;
         }
+
+        return false;
     }
 
-    // TODO: implement sorting
-    public final <T extends Component> List<Entity> sort(final Class<T> clazz) {
-        throw new UnsupportedOperationException("Sorting is not yet supported.");
+    public final boolean hasSystem(final EntitySystem p) {
+        return systems.contains(p);
     }
 
-    public final <T extends Component> List<Entity> sort(final Class<T> clazz, final Comparator<Entity> comparator) {
-        throw new UnsupportedOperationException("Sorting is not yet supported.");
-    }
-
-    public void register(EntityListener listener, Family family) {
+    public final void register(final EntityListener listener, final Family family) {
         List<EntityListener> listeners = filteredListeners.get(family);
+
         if (listeners == null) {
             listeners = new ArrayList<EntityListener>();
             filteredListeners.put(family, listeners);
@@ -267,90 +272,63 @@ public class Registry {
         listeners.add(listener);
     }
 
-    public void register(EntityListener listener) {
+    public void register(final EntityListener listener) {
         if (listeners.contains(listener)) return;
         listeners.add(listener);
     }
 
-    public void unregister(EntityListener listener, Family family) {
+    public void unregister(final EntityListener listener, final Family family) {
         List<EntityListener> listeners = filteredListeners.get(family);
+
         if (listeners == null) return;
         listeners.remove(listener);
     }
     
-    public void unregister(EntityListener listener) {
+    public final void unregister(final EntityListener listener) {
         listeners.remove(listener);
     }
 
-    public void bind(EntitySystem system) throws IllegalStateException, IllegalArgumentException {
-        if (updating) throw new IllegalStateException("cannot add system while updating");
-        
-        EntitySystem old = getSystem(system.getClass());
-        
-        if (old != null) removeSystem(old);
-        
-        system.bind(this);
-        systems.add(system);
-        systems.sort(EntitySystem.getComparator());
-        system.onBind(this);
+    // TODO: implement sorting
+    public final <T extends Component> List<Entity> sort(final Class<T> componentClass) {
+        throw new UnsupportedOperationException("Sorting is not yet supported.");
     }
 
-    public void bind(EntitySystem system, Family family) {
-        if (updating) throw new IllegalStateException("cannot add system while updating");
-
-        
+    public final <T extends Component> List<Entity> sort(final Class<T> componentClass, final Comparator<Entity> comparator) {
+        throw new UnsupportedOperationException("Sorting is not yet supported.");
     }
 
-    public void unbind(EntitySystem system) throws IllegalStateException, IllegalArgumentException {
-        if (updating) throw new IllegalStateException("cannot remove system while updating");
-        
-        if (!systems.contains(system)) throw new IllegalArgumentException("system is unknown");
-        
-        system.onUnbind(this);
-        systems.remove(system);
-        system.unbind();        
-    }
+    public final List<Entity> view(final Family family) {
+        List<Entity> view = views.get(family);
 
-    public <T extends EntitySystem> T getSystem(Class<T> clazz) throws IllegalArgumentException {
-        for (EntitySystem p : systems) if (clazz.isInstance(p)) {
-            return clazz.cast(p);
-        }
-        
-       return null;
-    }
-    
-    public boolean hasSystem(Class<?> clazz) {
-        for (EntitySystem p : systems) if (p.getClass() == clazz) {
-            return true;
+        if (view == null) {
+            view = new ArrayList<Entity>();
+            views.put(family, view);
+
+            initializeView(family, view);
         }
 
-        return false;
+        return Collections.unmodifiableList(view);
     }
 
-    public <T extends EntitySystem> T removeSystem(T system) {
-        if (updating) throw new IllegalStateException("cannot remove system while updating");
-        
-        if (!systems.contains(system)) throw new IllegalArgumentException("system is unknown");
-        
-        systems.remove(system);
-        system.unbind();
-        return system;
+    @SafeVarargs
+    public final List<Entity> view(final Class<? extends Component>... components) {
+        return view(Family.define(components));
     }
 
-    public EntitySystem getSystem(int index) {
-        return systems.get(index);
+    private void initializeView(Family family, List<Entity> view) {
+        if (!view.isEmpty()) return;
+
+        for (var entity : entities) if (family.isMember(entity)) {
+            view.add(entity);
+        }
     }
 
-    public boolean hasSystem(EntitySystem p) {
-        return systems.contains(p);
+    public int size() {
+        return entities.size();
     }
     
     public int systemCount() {
         return systems.size();
-    }
-
-    public int entityCount() {
-        return entities.size();
     }
 
 }

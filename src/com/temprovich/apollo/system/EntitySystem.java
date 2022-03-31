@@ -12,9 +12,9 @@ public interface EntitySystem {
 
     public abstract void unbind();
 
-    public abstract void onBind(Registry engine);
+    public abstract void onBind(Registry registry);
 
-    public abstract void onUnbind(Registry engine);
+    public abstract void onUnbind(Registry registry);
 
     public abstract void onStateChange();
 
@@ -32,14 +32,13 @@ public interface EntitySystem {
 
     public abstract void disable();
 
-    public static Comparator<EntitySystem> getComparator() {
-        return new Comparator<EntitySystem>() {
-            
-            @Override
-            public int compare(EntitySystem a, EntitySystem b) {
-                return a.getPriority() > b.getPriority() ? 1 : (a.getPriority() == b.getPriority()) ? 0 : -1;
-            }
-        };
+    public static final class SystemComparator implements Comparator<EntitySystem> {
+
+        @Override
+        public int compare(EntitySystem a, EntitySystem b) {
+            return a.getPriority() > b.getPriority() ? 1 : (a.getPriority() == b.getPriority()) ? 0 : -1;
+        }
+        
     }
 
 }

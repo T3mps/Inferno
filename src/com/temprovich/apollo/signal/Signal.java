@@ -7,17 +7,17 @@ public class Signal<T> {
 
     private List<SignalListener<T>> listeners = new CopyOnWriteArrayList<SignalListener<T>>();
     
-    public void register(SignalListener<T> l) {
-        if (listeners.contains(l)) return;
-        listeners.add(l);
+    public void register(SignalListener<T> listener) {
+        if (listeners.contains(listener)) return;
+        listeners.add(listener);
     }
     
-    public void unregister(SignalListener<T> l) {
-        listeners.remove(l);
+    public void unregister(SignalListener<T> listener) {
+        listeners.remove(listener);
     }
     
-    public void dispatch(T t) {
-        for (SignalListener<T> l : listeners) l.receive(t);
+    public void dispatch(T data) {
+        for (SignalListener<T> listener : listeners) listener.receive(data);
     }
     
 }
