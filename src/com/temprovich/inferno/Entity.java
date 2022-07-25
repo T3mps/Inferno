@@ -1,15 +1,14 @@
-package com.temprovich.apollo;
+package com.temprovich.inferno;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.temprovich.apollo.component.Component;
-import com.temprovich.apollo.signal.Signal;
-import com.temprovich.apollo.util.Bag;
+import com.temprovich.inferno.signal.Signal;
+import com.temprovich.inferno.util.Bag;
 
-public final class Entity {
+public class Entity {
 
     public int flags;
     
@@ -37,56 +36,91 @@ public final class Entity {
         this.registry = entity.registry;
         this.onComponentAdd = entity.onComponentAdd;
         this.onComponentRemove = entity.onComponentRemove;
-        this.components = entity.components;
-        this.componentMap = entity.componentMap;
+        this.components = new Bag<Component>(entity.components.size());
+        this.componentMap = new HashMap<Class<?>, Component>(entity.componentMap.size());
+
+        for (var component : entity.components) {
+            this.components.add(component);
+            this.componentMap.put(component.getClass(), component);
+        }
+
         this.enabled = entity.enabled;
     }
 
     public final Entity add(final Component component) {
-        if (component == null) throw new NullPointerException("component");
-        if (enabled || registry != null) throw new IllegalStateException("Entity is enabled or already added to a registry");
-        if (component.getParent() != null) throw new IllegalArgumentException("Component already added to an entity");
+        if (component == null) {
+            throw new NullPointerException("component");
+        }
+        if (enabled || registry != null) {
+            throw new IllegalStateException("Entity is enabled or already added to a registry");
+        }
+        if (component.getParent() != null) {
+            throw new IllegalArgumentException("Component already added to an entity");
+        }
         
         components.add(component);
         component.setParent(this);
         onComponentAdd();
 
-        if (enabled && !component.isEnabled()) component.enable();
+        if (enabled && !component.isEnabled()) {
+            component.enable();
+        }
 
         return this;
     }
 
     public final Entity addAll(final Component... components) {
-        for (var c : components) add(c);
+        for (var c : components) {
+            add(c);
+        }
+        
         return this;
     }
 
     public final Entity addAll(final Entity entity) {
-        for (var c : entity.components) add(c);
+        for (var c : entity.components) {
+            add(c);
+        }
+
         return this;
     }
 
     public final boolean has(final Class<?> componentClass) {
-        if (componentMap.containsKey(componentClass)) return true;
-
-        for (var component : components) if (componentClass.isInstance(component)) {
+        if (componentMap.containsKey(componentClass)) {
             return true;
+        }
+
+        for (var component : components) {
+            if (componentClass.isInstance(component)) {
+                return true;
+            }
         }
 
         return false;
     }
 
     public final boolean has(final Class<?>... componentClasses) {
-        for (var c : componentClasses) if (!has(c)) return false;
+        for (var c : componentClasses) {
+            if (!has(c)) {
+                return false;
+            }
+        }
+
         return true;
     }
 
     public final <T extends Component> boolean has(final T component) {
-        if (component == null) throw new NullPointerException("component");
-        if (componentMap.containsKey(component.getClass())) return true;
-
-        for (var c : components) if (component.equals(c)) {
+        if (component == null) {
+            throw new NullPointerException("component");
+        }
+        if (componentMap.containsKey(component.getClass())) {
             return true;
+        }
+
+        for (var c : components) {
+            if (component.equals(c)) {
+                return true;
+            }
         }
 
         return false;
@@ -94,7 +128,9 @@ public final class Entity {
 
     public final <T extends Component> T get(final Class<T> componentClass) {
         Component com = componentMap.get(componentClass);
-        if (com != null) return componentClass.cast(com);
+        if (com != null) {
+            return componentClass.cast(com);
+        }
         
         for (var component : components) {
             if (componentClass.isInstance(component)) {
@@ -117,41 +153,56 @@ public final class Entity {
 
         for (var componentClass : family.getTypes()) {
             T com = get((Class<T>) componentClass);
-            if (com != null) result.add(com);
+            if (com != null) {
+                result.add(com);
+            }
         }
 
         return result;
     }
 
     public final <T extends Component> T remove(final Class<T> componentClass) {
-        if (enabled || registry != null) throw new IllegalStateException("Entity is enabled or already added to a registry");
+        if (enabled || registry != null) {
+            throw new IllegalStateException("Entity is enabled or already added to a registry");
+        }
+
         T component = get(componentClass);
 
         components.remove(component);
         component.setParent(null);
         onComponentRemove();
 
-        if (enabled && component.isEnabled()) component.disable();
+        if (enabled && component.isEnabled()) {
+            component.disable();
+        }
 
         return componentClass.cast(component);
     }
 
     public final <T extends Component> T remove(final T component) {
-        if (component == null) throw new NullPointerException("component");
-        if (enabled || registry != null) throw new IllegalStateException("Entity is enabled or already added to a registry");
-        if (component.getParent() != this || !components.contains(component)) throw new IllegalArgumentException("Component not added to this entity");
+        if (component == null) {
+            throw new NullPointerException("component");
+        }
+        if (enabled || registry != null) {
+            throw new IllegalStateException("Entity is enabled or already added to a registry");
+        }
+        if (component.getParent() != this || !components.contains(component)) {
+            throw new IllegalArgumentException("Component not added to this entity");
+        }
 
         components.remove(component);
         component.setParent(null);
         onComponentRemove();
 
-        if (enabled && component.isEnabled()) component.disable();
+        if (enabled && component.isEnabled()) {
+            component.disable();
+        }
 
         return component;
     }
 
     void flush() {
-        for (Component component : components) {
+        for (var component : components) {
             component.setParent(null);
             component.disable();
         }
@@ -187,20 +238,36 @@ public final class Entity {
     }
 
     public Entity enable() {
-        if (enabled) return this;
-        for (Component component : components) if (!component.isEnabled()) component.enable();
+        if (enabled) {
+            return this;
+        }
+        
+        for (Component component : components) {
+            if (!component.isEnabled()) {
+                component.enable();
+            }
+        }
+
         enabled = true;
         return this;
     }
 
     public Entity disable() {
-        if (!enabled) return this;
-        for (Component component : components) if (component.isEnabled()) component.disable();
+        if (!enabled) {
+            return this;
+        }
+
+        for (var component : components) {
+            if (component.isEnabled()) {
+                component.disable();
+            }
+        }
+
         enabled = false;
         return this;
     }
 
-    Bag<Component> getComponents() {
+    public Bag<Component> getComponents() {
         return components;
     }
 
@@ -253,5 +320,4 @@ public final class Entity {
         .append(enabled)
         .toString();
     }
-
 }

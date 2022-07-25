@@ -1,6 +1,6 @@
-package com.temprovich.apollo.system;
+package com.temprovich.inferno.system;
 
-import com.temprovich.apollo.Registry;
+import com.temprovich.inferno.Registry;
 
 public class AbstractEntitySystem implements EntitySystem {
     

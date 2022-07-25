@@ -1,20 +1,20 @@
-package com.temprovich.apollo.system;
+package com.temprovich.inferno.system;
 
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
-import com.temprovich.apollo.Entity;
-import com.temprovich.apollo.EntityListener;
-import com.temprovich.apollo.Family;
-import com.temprovich.apollo.Registry;
-import com.temprovich.apollo.util.Array;
+import com.temprovich.inferno.Entity;
+import com.temprovich.inferno.EntityListener;
+import com.temprovich.inferno.Family;
+import com.temprovich.inferno.Registry;
 
 public abstract class SortedIterativeSystem extends AbstractEntitySystem implements EntityListener {
 
     private Family family;
 
-    private final Array<Entity> entities;
-    private Array<Entity> sortedEntities;
+    private final List<Entity> entities;
+    private List<Entity> sortedEntities;
     private Comparator<Entity> entityComparator;
     
     private boolean sort = false;
@@ -26,8 +26,8 @@ public abstract class SortedIterativeSystem extends AbstractEntitySystem impleme
     public SortedIterativeSystem(Family family, Comparator<Entity> entityComparator, int priority) {
         super(priority);
         this.family = family;
-        this.entities = new Array<Entity>();
-        this.sortedEntities = new Array<Entity>(16);
+        this.entities = new ArrayList<Entity>();
+        this.sortedEntities = new ArrayList<Entity>(16);
         this.sort = false;
         this.entityComparator = entityComparator;
     }
@@ -64,11 +64,15 @@ public abstract class SortedIterativeSystem extends AbstractEntitySystem impleme
 
     @Override
     public void onBind(Registry registry) {
-        List<Entity> n = registry.view(family);
+        var view = registry.view(family);
+
+        for (var entity : view) {
+            entities.add(entity);
+        }
         sortedEntities.clear();
 
-        if (!n.isEmpty()) {
-            for (int i = 0; i < n.size(); i++) sortedEntities.add(n.get(i));
+        if (!view.isEmpty()) {
+            for (int i = 0; i < view.size(); i++) sortedEntities.add(view.get(i));
             sortedEntities.sort(entityComparator);
         }
 
@@ -99,8 +103,7 @@ public abstract class SortedIterativeSystem extends AbstractEntitySystem impleme
         return family;
     }
     
-    public Array<Entity> getEntities() {
+    public List<Entity> getEntities() {
         return entities;
     }
-
 }

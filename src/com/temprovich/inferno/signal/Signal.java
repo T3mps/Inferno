@@ -1,4 +1,4 @@
-package com.temprovich.apollo.signal;
+package com.temprovich.inferno.signal;
 
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;

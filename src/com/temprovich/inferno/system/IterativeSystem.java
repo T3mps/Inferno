@@ -1,11 +1,11 @@
-package com.temprovich.apollo.system;
+package com.temprovich.inferno.system;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import com.temprovich.apollo.Entity;
-import com.temprovich.apollo.Family;
-import com.temprovich.apollo.Registry;
+import com.temprovich.inferno.Entity;
+import com.temprovich.inferno.Family;
+import com.temprovich.inferno.Registry;
 
 public abstract class IterativeSystem extends AbstractEntitySystem {
 
@@ -32,7 +32,11 @@ public abstract class IterativeSystem extends AbstractEntitySystem {
 
     @Override
     public void onBind(Registry registry) {
-        entities = registry.view(family);
+        var view = registry.view(family);
+        
+        for (var entity : view) {
+            entities.add(entity);
+        }
     }
 
     @Override

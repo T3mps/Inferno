@@ -1,4 +1,4 @@
-package com.temprovich.apollo.signal;
+package com.temprovich.inferno.signal;
 
 public interface SignalListener<T> {
 

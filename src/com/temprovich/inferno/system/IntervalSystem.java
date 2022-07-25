@@ -1,4 +1,4 @@
-package com.temprovich.apollo.system;
+package com.temprovich.inferno.system;
 
 public abstract class IntervalSystem extends AbstractEntitySystem {
 

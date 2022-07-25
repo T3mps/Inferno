@@ -1,8 +1,8 @@
-package com.temprovich.apollo.system;
+package com.temprovich.inferno.system;
 
 import java.util.Comparator;
 
-import com.temprovich.apollo.Registry;
+import com.temprovich.inferno.Registry;
 
 public interface EntitySystem {
 

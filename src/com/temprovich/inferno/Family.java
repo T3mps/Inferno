@@ -1,12 +1,10 @@
-package com.temprovich.apollo;
+package com.temprovich.inferno;
 
 import java.util.HashSet;
 import java.util.Set;
 
-import com.temprovich.apollo.component.Component;
-
-public final class Family {
-
+public class Family {
+    
     private final Set<Class<?>> types = new HashSet<Class<?>>();
 
     @SafeVarargs
@@ -120,5 +118,4 @@ public final class Family {
         builder.append("]");
         return builder.toString();
     }
-
 }

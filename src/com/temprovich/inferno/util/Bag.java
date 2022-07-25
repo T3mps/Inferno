@@ -1,23 +1,15 @@
-package com.temprovich.apollo.util;
 
+package com.temprovich.inferno.util;
+import java.lang.reflect.Array;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
+import java.util.function.Consumer;
+import java.util.stream.Stream;
 
-/**
- * An implementation of a MultiSe; a {@link java.util.Set Set} that allows 
- * multiple elements to be added to it.
- * <p>
- * The items are not ordered.
- * <p>
- * <strong>Note:</strong> This class does not extend {@link java.util.Set Set},
- * instead it extends {@link java.util.Collection Collection}.
- * 
- * @author Ethan Temprovich
- */
 public class Bag<E> implements Collection<E> {
 
-    private static final int DEFAULT_INITIAL_CAPACITY = 64;
+    private static final int DEFAULT_INITIAL_CAPACITY = 16;
 
     public E[] data;
     private int size;
@@ -33,11 +25,14 @@ public class Bag<E> implements Collection<E> {
 
     @SuppressWarnings("unchecked")
     public boolean add(Object e) {
-		if (size == data.length) grow();
-        return internalAdd((E) e);
+		if (size == data.length) {
+            grow();
+        }
+
+        return addInternal((E) e);
 	}
     
-    private boolean internalAdd(E e) {
+    private boolean addInternal(E e) {
         data[size++] = e;
         return true;
     }
@@ -135,41 +130,17 @@ public class Bag<E> implements Collection<E> {
         return new BagIterator();
     }
 
-    private class BagIterator implements Iterator<E> {
+    public void each(Consumer<E> consumer) {
+        for (int i = 0; i < size; i++) {
+            consumer.accept(data[i]);
+        }
+    }
 
-        /** Current position. */
-         private int pointer;
-
-         /** True if the current position is within bounds. */
-         private boolean next;
- 
- 
-         @Override
-         public boolean hasNext() {
-             return (pointer < size);
-         }
- 
- 
-         @Override
-         public E next() {
-             if (pointer == size) throw new NoSuchElementException("No more elements");
- 
-             E e = data[pointer++];
-             next = true;
-
-             return e;
-         }
- 
- 
-         @Override
-         public void remove() {
-             if (!next) throw new IllegalStateException("Attempting to remove an item from an empty bag");
- 
-             next = false;
-             Bag.this.remove(--pointer);
-         }
-     
-     }
+    public void each(Consumer<E> consumer, int start, int end) {
+        for (int i = start; i < end; i++) {
+            consumer.accept(data[i]);
+        }
+    }
 
     @Override
     public Object[] toArray() {
@@ -179,8 +150,24 @@ public class Bag<E> implements Collection<E> {
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public <T> T[] toArray(T[] a) {
-        throw new UnsupportedOperationException("Not supported yet.");
+        if (a.length < size) {
+            a = (T[]) Array.newInstance(a.getClass().getComponentType(), size);
+        }
+        System.arraycopy(data, 0, a, 0, size);
+        if (a.length > size) {
+            a[size] = null;
+        }
+        return a;
+    }
+
+    public Stream<E> stream() {
+        return Stream.of(data).limit(size);
+    }
+    
+    public Stream<E> parallelStream() {
+        return stream().parallel();
     }
 
     @Override
@@ -200,5 +187,51 @@ public class Bag<E> implements Collection<E> {
     public boolean retainAll(Collection<?> c) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
+
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("[");
+        for (int i = 0; i < size; i++) {
+            if (i > 0) sb.append(", ");
+            sb.append(data[i]);
+        }
+        sb.append("]");
+        return sb.toString();
+    }
     
+    private class BagIterator implements Iterator<E> {
+
+        /** Current position. */
+        private int pointer;
+
+        /** True if the current position is within bounds. */
+        private boolean next;
+
+
+        @Override
+        public boolean hasNext() {
+            return (pointer < size);
+        }
+
+
+        @Override
+        public E next() {
+            if (pointer == size) throw new NoSuchElementException("No more elements");
+
+            E e = data[pointer++];
+            next = true;
+
+            return e;
+        }
+
+
+        @Override
+        public void remove() {
+            if (!next) throw new IllegalStateException("Attempting to remove an item from an empty bag");
+
+            next = false;
+            Bag.this.remove(--pointer);
+        }
+    }
 }

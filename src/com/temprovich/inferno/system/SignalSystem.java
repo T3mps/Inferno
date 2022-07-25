@@ -1,8 +1,8 @@
-package com.temprovich.apollo.system;
+package com.temprovich.inferno.system;
 
-import com.temprovich.apollo.Entity;
-import com.temprovich.apollo.signal.Signal;
-import com.temprovich.apollo.signal.SignalListener;
+import com.temprovich.inferno.Entity;
+import com.temprovich.inferno.signal.Signal;
+import com.temprovich.inferno.signal.SignalListener;
 
 public abstract class SignalSystem extends AbstractEntitySystem implements SignalListener<Entity> {
 
