@@ -8,7 +8,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.LinkedBlockingDeque;
-import java.util.function.Consumer;
 import java.util.stream.Stream;
 
 import com.temprovich.inferno.system.EntitySystem;
@@ -24,6 +23,7 @@ public final class Registry implements Iterable<Entity> {
     private final List<EntitySystem> systems;
     private final List<EntityListener> listeners;
     private final Map<Family, List<EntityListener>> filteredListeners;
+    private final Map<Entity, Hierarchy> hierarchies;
 
     private boolean updating;
 
@@ -38,6 +38,7 @@ public final class Registry implements Iterable<Entity> {
         this.systems = new ArrayList<EntitySystem>();
         this.listeners = new ArrayList<EntityListener>();
         this.filteredListeners = new HashMap<Family, List<EntityListener>>();
+        this.hierarchies = new HashMap<Entity, Hierarchy>();
         this.updating = false;
     }
 
@@ -254,7 +255,10 @@ public final class Registry implements Iterable<Entity> {
     }
 
     public void update(float dt) {
-        if (updating) return;
+        if (updating) {
+            return;
+        }
+
         updating = true;
         
         // update systems
@@ -396,6 +400,40 @@ public final class Registry implements Iterable<Entity> {
         listeners.remove(listener);
     }
 
+    public final Hierarchy createHierarchy(Entity root, Entity... children) {
+        Hierarchy hierarchy = Hierarchy.create(root);
+        for (Entity child : children) {
+            hierarchy.addChild(child);
+        }
+
+        hierarchies.put(root, hierarchy);
+        
+        return hierarchy;
+    }
+
+    public final Hierarchy createHierarchy(Entity root, List<Entity> children) {
+        Hierarchy hierarchy = Hierarchy.create(root);
+        for (Entity child : children) {
+            hierarchy.addChild(child);
+        }
+
+        hierarchies.put(root, hierarchy);
+        
+        return hierarchy;
+    }
+
+    public final Hierarchy getHierarchy(Entity root) {
+        return hierarchies.get(root);
+    }
+
+    public final void removeHierarchy(Entity root) {
+        hierarchies.remove(root);
+    }
+
+    public final void removeHierarchy(Hierarchy hierarchy) {
+        hierarchies.remove(hierarchy.getRoot().getEntity());
+    }
+
     // TODO: implement sorting
     public final <T extends Component> List<Entity> sort(final Class<T> componentClass) {
         throw new UnsupportedOperationException("Sorting is not yet supported.");
@@ -410,13 +448,14 @@ public final class Registry implements Iterable<Entity> {
 
         if (list == null) {
             list = new ArrayList<Entity>();
-            views.put(family, list);
             
             for (var entity : entities) {
                 if (family.isMember(entity)) {
                     list.add(entity);
                 }
             }
+            
+            views.put(family, list);
         }
 
         return new View(family, list);
@@ -425,6 +464,29 @@ public final class Registry implements Iterable<Entity> {
     @SafeVarargs
     public final View view(final Class<? extends Component>... components) {
         return view(Family.define(components));
+    }
+
+    public final List<Entity> group(final Family family) {
+        List<Entity> list = views.get(family);
+
+        if (list == null) {
+            list = new ArrayList<Entity>();
+            
+            for (var entity : entities) {
+                if (family.isMember(entity)) {
+                    list.add(entity);
+                }
+            }
+            
+            views.put(family, list);
+        }
+
+        return list;
+    }
+
+    @SafeVarargs
+    public final List<Entity> group(final Class<? extends Component>... components) {
+        return group(Family.define(components));
     }
 
     public int size() {
@@ -438,18 +500,6 @@ public final class Registry implements Iterable<Entity> {
     @Override
     public Iterator<Entity> iterator() {
         return entities.iterator();
-    }
-
-    public void each(final Consumer<Entity> consumer) {
-        for (var entity : entities) {
-            consumer.accept(entity);
-        }
-    }
-    
-    public void each(final Consumer<Entity> consumer, int start, int end) {
-        for (int i = start; i < end; i++) {
-            consumer.accept(entities.get(i));
-        }
     }
 
     public Entity[] toArray() {

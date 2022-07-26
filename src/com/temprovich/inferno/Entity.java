@@ -21,7 +21,7 @@ public class Entity {
 
     private boolean enabled;
     
-    Entity() {
+    public Entity() {
         this.flags = 0;
         this.registry = null;
         this.onComponentAdd = new Signal<Entity>();

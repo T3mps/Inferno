@@ -2,6 +2,7 @@ package com.temprovich.inferno.system;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.Iterator;
 import java.util.List;
 
 import com.temprovich.inferno.Entity;
@@ -9,7 +10,7 @@ import com.temprovich.inferno.EntityListener;
 import com.temprovich.inferno.Family;
 import com.temprovich.inferno.Registry;
 
-public abstract class SortedIterativeSystem extends AbstractEntitySystem implements EntityListener {
+public abstract class SortedIterativeSystem extends AbstractEntitySystem implements EntityListener, Iterable<Entity> {
 
     private Family family;
 
@@ -105,5 +106,10 @@ public abstract class SortedIterativeSystem extends AbstractEntitySystem impleme
     
     public List<Entity> getEntities() {
         return entities;
+    }
+
+    @Override
+    public Iterator<Entity> iterator() {
+        return sortedEntities.iterator();
     }
 }

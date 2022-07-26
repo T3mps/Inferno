@@ -3,7 +3,6 @@ package com.temprovich.inferno;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
-import java.util.function.Consumer;
 import java.util.stream.Stream;
 
 public class View implements Iterable<Entity> {
@@ -66,18 +65,6 @@ public class View implements Iterable<Entity> {
         return new ViewIterator(this);
     }
 
-    public void each(Consumer<Entity> consumer) {
-        for (var entity : this) {
-            consumer.accept(entity);
-        }
-    }
-
-    public void each(Consumer<Entity> consumer, int start, int end) {
-        for (int i = start; i < end; i++) {
-            consumer.accept(entities[i]);
-        }
-    }
-
     public Entity[] toArray() {
         return entities;
     }
@@ -103,24 +90,24 @@ public class View implements Iterable<Entity> {
         return Arrays.stream(entities).parallel();
     }
 
-    private static class ViewIterator implements Iterator<Entity> {
+    private class ViewIterator implements Iterator<Entity> {
 
         private View view;
-        private int index;
+        private int pointer;
 
         public ViewIterator(View view) {
             this.view = view;
-            this.index = 0;
+            this.pointer = 0;
         }
 
         @Override
         public boolean hasNext() {
-            return index < view.size();
+            return pointer < view.size();
         }
 
         @Override
         public Entity next() {
-            return view.get(index++);
+            return view.get(pointer++);
         }
     }
 }

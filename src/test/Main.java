@@ -4,6 +4,8 @@ import java.util.UUID;
 
 import com.temprovich.inferno.Component;
 import com.temprovich.inferno.Entity;
+import com.temprovich.inferno.Family;
+import com.temprovich.inferno.Hierarchy;
 import com.temprovich.inferno.Registry;
 
 public class Main {
@@ -36,26 +38,17 @@ public class Main {
             registry.add(entity);
         }
 
-        System.out.println("Registry size: " + registry.size());
+        Family family = Family.define(TagComponent.class, TransformComponent.class);
 
-        for (Entity entity : registry) {
-            System.out.println(entity);
+        for (var type : family) {
+            System.out.println(type.getName());
         }
 
-        var view = registry.view(TransformComponent.class);
-        view.each(entity -> {
-            System.out.println(entity);
-        });
+        Hierarchy hierarchy = Hierarchy.create(registry.get(0));
 
-        view = registry.view(RenderComponent.class);
-        view.each(entity -> {
-            System.out.println(entity);
-        });
-
-        view = registry.view(TagComponent.class);
-        view.each(entity -> {
-            System.out.println(entity);
-        });
+        for (int i = 1; i < registry.size(); i++) {
+            hierarchy.addChild(registry.get(i));
+        }
     }
     
     public static void main(String[] args) {

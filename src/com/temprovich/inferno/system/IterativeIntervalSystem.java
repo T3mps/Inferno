@@ -1,13 +1,14 @@
 package com.temprovich.inferno.system;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 import com.temprovich.inferno.Entity;
 import com.temprovich.inferno.Family;
 import com.temprovich.inferno.Registry;
 
-public abstract class IterativeIntervalSystem extends IntervalSystem {
+public abstract class IterativeIntervalSystem extends IntervalSystem implements Iterable<Entity> {
 
     private Family family;
     private List<Entity> entities;
@@ -53,5 +54,9 @@ public abstract class IterativeIntervalSystem extends IntervalSystem {
     public List<Entity> getEntities() {
         return entities;
     }
-    
+
+    @Override
+    public Iterator<Entity> iterator() {
+        return entities.iterator();
+    }
 }
