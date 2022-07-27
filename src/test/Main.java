@@ -4,8 +4,7 @@ import java.util.UUID;
 
 import com.temprovich.inferno.Component;
 import com.temprovich.inferno.Entity;
-import com.temprovich.inferno.Family;
-import com.temprovich.inferno.Hierarchy;
+import com.temprovich.inferno.Inferno;
 import com.temprovich.inferno.Registry;
 
 public class Main {
@@ -15,6 +14,7 @@ public class Main {
     // simulation parameters
 
     private int initialEntityCount = 10;
+    private int iterations = 100;
 
     // end simulation parameters
 
@@ -22,7 +22,7 @@ public class Main {
         this.registry = new Registry();
 
         for (int i = 0; i < initialEntityCount; i++) {
-            Entity entity = Registry.create();
+            Entity entity = Inferno.create();
             String name = "Entity " + (i + 1);
             String uuid = UUID.randomUUID().toString();
             entity.add(new TagComponent(name, uuid));
@@ -37,17 +37,11 @@ public class Main {
 
             registry.add(entity);
         }
+    }
 
-        Family family = Family.define(TagComponent.class, TransformComponent.class);
-
-        for (var type : family) {
-            System.out.println(type.getName());
-        }
-
-        Hierarchy hierarchy = Hierarchy.create(registry.get(0));
-
-        for (int i = 1; i < registry.size(); i++) {
-            hierarchy.addChild(registry.get(i));
+    private void loop() {
+        for (int i = 0; i < iterations; i++) {
+            registry.update(0.016f);
         }
     }
     

@@ -1,7 +1,6 @@
 package com.temprovich.inferno;
 
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -9,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.stream.Stream;
+import java.util.Collection;
 
 import com.temprovich.inferno.system.EntitySystem;
 
@@ -23,7 +23,6 @@ public final class Registry implements Iterable<Entity> {
     private final List<EntitySystem> systems;
     private final List<EntityListener> listeners;
     private final Map<Family, List<EntityListener>> filteredListeners;
-    private final Map<Entity, Hierarchy> hierarchies;
 
     private boolean updating;
 
@@ -31,28 +30,20 @@ public final class Registry implements Iterable<Entity> {
         this(DEFAULT_INITIAL_CAPACITY);
     }
 
-    public Registry(final int initialCapacity) {
+    public Registry(int initialCapacity) {
         this.entities = new ArrayList<Entity>(initialCapacity);
         this.views = new HashMap<Family, List<Entity>>(initialCapacity);
         this.tasks = new LinkedBlockingDeque<Task>();
         this.systems = new ArrayList<EntitySystem>();
         this.listeners = new ArrayList<EntityListener>();
         this.filteredListeners = new HashMap<Family, List<EntityListener>>();
-        this.hierarchies = new HashMap<Entity, Hierarchy>();
         this.updating = false;
-    }
-
-    public static final Entity create() {
-        return new Entity();
-    }
-
-    public static final Entity emulate(final Entity entity) {
-        return new Entity(entity);
     }
 
     @SafeVarargs
     public final <T extends Component> Entity emplace(final T... components) {
-        Entity entity = new Entity().addAll(components);
+        Entity entity = new Entity();
+        entity.addAll(components);
         add(entity);
         return entity;
     }
@@ -69,7 +60,13 @@ public final class Registry implements Iterable<Entity> {
         addInternal(entity);
     }
 
-    public final void add(final List<Entity> entities) {
+    public final void add(final Entity... entities) {
+        for (var entity : entities) {
+            add(entity);
+        }
+    }
+
+    public final void add(final Collection<Entity> entities) {
         for (var entity : entities) {
             add(entity);
         }
@@ -99,7 +96,7 @@ public final class Registry implements Iterable<Entity> {
 
         for (var entry : filteredListeners.entrySet()) {
             if (entry.getKey().isMember(entity)) {
-                for (EntityListener l : entry.getValue()) {
+                for (var l : entry.getValue()) {
                     l.onEntityAdd(entity);
                 }
             }
@@ -117,8 +114,8 @@ public final class Registry implements Iterable<Entity> {
         
         removeInternal(entity);
     }
-
-    public final void destroy(final Entity entity, final boolean immediate) {
+    
+    public final void destroy(final boolean immediate, final Entity entity) {
         if (immediate) {
             removeInternal(entity);
 
@@ -128,13 +125,25 @@ public final class Registry implements Iterable<Entity> {
         destroy(entity);
     }
 
-    public final void destroy(final List<Entity> entities) {
-        for (var entity : entities) {
-            destroy(entity);
+    public final void destroy(final boolean immediate, final int start, final int end) {
+        for (int i = start; i < end; i++) {
+            destroy(immediate, entities.get(i));
         }
     }
 
-    private void removeInternal(Entity entity) {
+    public final void destroy(final boolean immediate, final Entity... entities) {
+        for (var entity : entities) {
+            destroy(immediate, entity);
+        }
+    }
+
+    public final void destroy(final boolean immediate, final Collection<Entity> entities) {
+        for (var entity : entities) {
+            destroy(immediate, entity);
+        }
+    }
+
+    private void removeInternal(final Entity entity) {
         if (entity.getRegistry() != this) {
             return;
         }
@@ -146,13 +155,13 @@ public final class Registry implements Iterable<Entity> {
         }
 
         // inform listeners as long as the entity is still active
-        for (EntityListener l : listeners) {
+        for (var l : listeners) {
             l.onEntityRemove(entity);
         }
         
         for (var entry : filteredListeners.entrySet()) {
             if (entry.getKey().isMember(entity)) {
-                for (EntityListener l : entry.getValue()) {
+                for (var l : entry.getValue()) {
                     l.onEntityRemove(entity);
                 }
             }
@@ -164,7 +173,7 @@ public final class Registry implements Iterable<Entity> {
         entities.remove(entity);
         entity.flush();
         
-        for (List<Entity> view : views.values()) {
+        for (var view : views.values()) {
             view.remove(entity);
         }
     }
@@ -220,19 +229,19 @@ public final class Registry implements Iterable<Entity> {
         entity.removeRegistry();
         entities.remove(entity);
         
-        for (Family family : views.keySet()) {
+        for (var family : views.keySet()) {
             if (family.isMember(entity)) {
                 views.get(family).remove(entity);
             }
         }
 
-        for (EntityListener l : listeners) {
+        for (var l : listeners) {
             l.onEntityRemove(entity);
         }
         
         for (var entry : filteredListeners.entrySet()) {
             if (entry.getKey().isMember(entity)) {
-                for (EntityListener l : entry.getValue()) {
+                for (var l : entry.getValue()) {
                     l.onEntityRemove(entity);
                 }
             }
@@ -251,7 +260,9 @@ public final class Registry implements Iterable<Entity> {
     }
 
     private void releaseAllInternal() {
-        while (!entities.isEmpty()) releaseInternal(entities.get(0));
+        while (!entities.isEmpty()) {
+            releaseInternal(entities.get(0));
+        }
     }
 
     public void update(float dt) {
@@ -336,7 +347,7 @@ public final class Registry implements Iterable<Entity> {
     }
 
     public final <T extends EntitySystem> T getSystem(final Class<T> clazz) {
-        for (EntitySystem p : systems) {
+        for (var p : systems) {
             if (clazz.isInstance(p)) {
                 return clazz.cast(p);
             }
@@ -350,7 +361,7 @@ public final class Registry implements Iterable<Entity> {
     }
     
     public final <T extends EntitySystem> boolean hasSystem(final Class<T> clazz) {
-        for (EntitySystem p : systems) {
+        for (var p : systems) {
             if (p.getClass() == clazz) {
                 return true;
             }
@@ -370,7 +381,6 @@ public final class Registry implements Iterable<Entity> {
             listeners = new ArrayList<EntityListener>();
             filteredListeners.put(family, listeners);
         }
-
         if (listeners.contains(listener)) {
             return;
         }
@@ -398,49 +408,6 @@ public final class Registry implements Iterable<Entity> {
     
     public final void unregister(final EntityListener listener) {
         listeners.remove(listener);
-    }
-
-    public final Hierarchy createHierarchy(Entity root, Entity... children) {
-        Hierarchy hierarchy = Hierarchy.create(root);
-        for (Entity child : children) {
-            hierarchy.addChild(child);
-        }
-
-        hierarchies.put(root, hierarchy);
-        
-        return hierarchy;
-    }
-
-    public final Hierarchy createHierarchy(Entity root, List<Entity> children) {
-        Hierarchy hierarchy = Hierarchy.create(root);
-        for (Entity child : children) {
-            hierarchy.addChild(child);
-        }
-
-        hierarchies.put(root, hierarchy);
-        
-        return hierarchy;
-    }
-
-    public final Hierarchy getHierarchy(Entity root) {
-        return hierarchies.get(root);
-    }
-
-    public final void removeHierarchy(Entity root) {
-        hierarchies.remove(root);
-    }
-
-    public final void removeHierarchy(Hierarchy hierarchy) {
-        hierarchies.remove(hierarchy.getRoot().getEntity());
-    }
-
-    // TODO: implement sorting
-    public final <T extends Component> List<Entity> sort(final Class<T> componentClass) {
-        throw new UnsupportedOperationException("Sorting is not yet supported.");
-    }
-
-    public final <T extends Component> List<Entity> sort(final Class<T> componentClass, final Comparator<Entity> comparator) {
-        throw new UnsupportedOperationException("Sorting is not yet supported.");
     }
 
     public final View view(final Family family) {

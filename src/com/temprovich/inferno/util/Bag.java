@@ -4,8 +4,8 @@ import java.lang.reflect.Array;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
-import java.util.function.Consumer;
 import java.util.stream.Stream;
+import java.util.Arrays;
 
 public class Bag<E> implements Collection<E> {
 
@@ -20,7 +20,7 @@ public class Bag<E> implements Collection<E> {
 
     @SuppressWarnings("unchecked")
     public Bag(int capacity) {
-        data = (E[]) new Object[capacity];
+        this.data = (E[]) new Object[capacity];
     }
 
     @SuppressWarnings("unchecked")
@@ -29,13 +29,9 @@ public class Bag<E> implements Collection<E> {
             grow();
         }
 
-        return addInternal((E) e);
-	}
-    
-    private boolean addInternal(E e) {
-        data[size++] = e;
+        data[size++] = (E) e;
         return true;
-    }
+	}
 
     @Override
     public boolean addAll(Collection<? extends E> c) {
@@ -56,10 +52,19 @@ public class Bag<E> implements Collection<E> {
 
     @Override
     public boolean contains(Object e) {
-        for (int i = 0; i < size; i++) if (data[i].equals(e)) {
-            return true;
+        for (int i = 0; i < size; i++) {
+            if (data[i].equals(e)) {
+                return true;
+            }
         }
+ 
         return false;
+    }
+
+    @Override
+    public boolean containsAll(Collection<?> c) {
+        for (Object o : c) if (!contains(o)) return false;
+        return true;
     }
 
     public E remove(int index) {
@@ -85,16 +90,31 @@ public class Bag<E> implements Collection<E> {
     }
 
     public E removeLast() {
-        if (size == 0) return null;
+        if (size == 0) {
+            return null;
+        }
 
         E e = data[--size];
         data[size] = null;
+        
         return e;
     }
 
     @Override
+    public boolean removeAll(Collection<?> c) {
+        boolean changed = false;
+        for (var o : c) {
+            changed |= remove(o);
+        }
+
+        return changed;
+    }
+
+    @Override
     public void clear() {
-		for (int i = 0; i < size; i++) data[i] = null;
+		for (int i = 0; i < size; i++) {
+            data[i] = null;
+        }
 
 		size = 0;
 	}
@@ -126,20 +146,13 @@ public class Bag<E> implements Collection<E> {
 	}
 
     @Override
+    public boolean retainAll(Collection<?> c) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
     public Iterator<E> iterator() {
         return new BagIterator();
-    }
-
-    public void each(Consumer<E> consumer) {
-        for (int i = 0; i < size; i++) {
-            consumer.accept(data[i]);
-        }
-    }
-
-    public void each(Consumer<E> consumer, int start, int end) {
-        for (int i = start; i < end; i++) {
-            consumer.accept(data[i]);
-        }
     }
 
     @Override
@@ -155,7 +168,9 @@ public class Bag<E> implements Collection<E> {
         if (a.length < size) {
             a = (T[]) Array.newInstance(a.getClass().getComponentType(), size);
         }
+
         System.arraycopy(data, 0, a, 0, size);
+        
         if (a.length > size) {
             a[size] = null;
         }
@@ -171,32 +186,45 @@ public class Bag<E> implements Collection<E> {
     }
 
     @Override
-    public boolean containsAll(Collection<?> c) {
-        for (Object o : c) if (!contains(o)) return false;
+    public int hashCode() {
+        final int prime = 31;
+        int result = 1;
+        result = prime * result + Arrays.deepHashCode(data);
+        result = prime * result + size;
+        return result;
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public boolean equals(Object obj) {
+        if (this == obj) {
+            return true;
+        }
+        if (!(obj instanceof Bag)) {
+            return false;
+        }
+        Bag<E> other = (Bag<E>) obj;
+        if (!Arrays.deepEquals(data, other.data)) {
+            return false;
+        }
+        if (size != other.size) {
+            return false;
+        }
         return true;
-    }
-
-    @Override
-    public boolean removeAll(Collection<?> c) {
-        boolean changed = false;
-        for (Object o : c) changed |= remove(o);
-        return changed;
-    }
-
-    @Override
-    public boolean retainAll(Collection<?> c) {
-        throw new UnsupportedOperationException("Not supported yet.");
     }
 
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
         sb.append("[");
+
         for (int i = 0; i < size; i++) {
             if (i > 0) sb.append(", ");
             sb.append(data[i]);
         }
+
         sb.append("]");
+        
         return sb.toString();
     }
     

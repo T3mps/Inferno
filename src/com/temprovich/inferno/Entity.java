@@ -2,13 +2,14 @@ package com.temprovich.inferno;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
 import com.temprovich.inferno.signal.Signal;
 import com.temprovich.inferno.util.Bag;
 
-public class Entity {
+public final class Entity implements Iterable<Component> {
 
     public int flags;
     
@@ -21,7 +22,7 @@ public class Entity {
 
     private boolean enabled;
     
-    public Entity() {
+    Entity() {
         this.flags = 0;
         this.registry = null;
         this.onComponentAdd = new Signal<Entity>();
@@ -60,7 +61,7 @@ public class Entity {
         
         components.add(component);
         component.setParent(this);
-        onComponentAdd();
+        onComponentAdd.dispatch(this);
 
         if (enabled && !component.isEnabled()) {
             component.enable();
@@ -170,7 +171,7 @@ public class Entity {
 
         components.remove(component);
         component.setParent(null);
-        onComponentRemove();
+        onComponentRemove.dispatch(this);
 
         if (enabled && component.isEnabled()) {
             component.disable();
@@ -192,11 +193,12 @@ public class Entity {
 
         components.remove(component);
         component.setParent(null);
-        onComponentRemove();
 
         if (enabled && component.isEnabled()) {
             component.disable();
         }
+
+        onComponentRemove.dispatch(this);
 
         return component;
     }
@@ -205,18 +207,11 @@ public class Entity {
         for (var component : components) {
             component.setParent(null);
             component.disable();
+            onComponentRemove.dispatch(this);
         }
         
         components.clear();
         componentMap.clear();
-    }
-
-    void onComponentAdd() {
-        onComponentAdd.dispatch(this);
-    }
-
-    void onComponentRemove() {
-        onComponentRemove.dispatch(this);
     }
 
     public Registry getRegistry() {
@@ -272,6 +267,11 @@ public class Entity {
     }
 
     @Override
+    public Iterator<Component> iterator() {
+        return components.iterator();
+    }
+
+    @Override
     public int hashCode() {
         int result = 1;
         result = ((result << 5) - result) + ((componentMap == null) ? 0 : componentMap.hashCode());
@@ -286,26 +286,54 @@ public class Entity {
 
     @Override
     public boolean equals(Object obj) {
-        if (this == obj) return true;
-        if (!(obj instanceof Entity)) return false;
+        if (this == obj) {
+            return true;
+        }
+        if (!(obj instanceof Entity)) {
+            return false;
+        }
         Entity other = (Entity) obj;
         if (componentMap == null) {
-            if (other.componentMap != null) return false;
-        } else if (!componentMap.equals(other.componentMap)) return false;
+            if (other.componentMap != null) {
+                return false;
+            }
+        } else if (!componentMap.equals(other.componentMap)) {
+            return false;
+        }
         if (components == null) {
-            if (other.components != null) return false;
-        } else if (!components.equals(other.components)) return false;
-        if (enabled != other.enabled) return false;
-        if (flags != other.flags) return false;
+            if (other.components != null) {
+                return false;
+            }
+        } else if (!components.equals(other.components)) {
+            return false;
+        }
+        if (enabled != other.enabled) {
+            return false;
+        }
+        if (flags != other.flags) {
+            return false;
+        }
         if (onComponentAdd == null) {
-            if (other.onComponentAdd != null) return false;
-        } else if (!onComponentAdd.equals(other.onComponentAdd)) return false;
+            if (other.onComponentAdd != null) {
+                return false;
+            }
+        } else if (!onComponentAdd.equals(other.onComponentAdd)) {
+            return false;
+        }
         if (onComponentRemove == null) {
-            if (other.onComponentRemove != null) return false;
-        } else if (!onComponentRemove.equals(other.onComponentRemove)) return false;
+            if (other.onComponentRemove != null) {
+                return false;
+            }
+        } else if (!onComponentRemove.equals(other.onComponentRemove)) {
+            return false;
+        }
         if (registry == null) {
-            if (other.registry != null) return false;
-        } else if (!registry.equals(other.registry)) return false;
+            if (other.registry != null) {
+                return false;
+            }
+        } else if (!registry.equals(other.registry)) {
+            return false;
+        }
         return true;
     }
 
